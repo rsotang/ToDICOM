@@ -1,0 +1,3 @@
+encontrar plantillas
+Adaptar el codigo a nuevos estudios
+implementar en script
