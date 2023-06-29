@@ -1,6 +1,5 @@
 import os
 import pydicom
-import numpy as np
 from scipy.ndimage import zoom
 import re  # Módulo de expresiones regulares
 
@@ -22,9 +21,9 @@ archivos_carpeta2 = os.listdir(carpeta2)
 archivos_carpeta1= ordenar_alfanumericamente(archivos_carpeta1)
 archivos_carpeta2= ordenar_alfanumericamente(archivos_carpeta2)
 
-print(archivos_carpeta1)
+#print(archivos_carpeta1)
 
-print(archivos_carpeta2)
+#print(archivos_carpeta2)
 
 # Itera sobre los archivos en las carpetas
 for item in range(len(archivos_carpeta1)):
@@ -64,6 +63,6 @@ for item in range(len(archivos_carpeta1)):
   #Para ello he sorteado los nombres con expresiones regulares
     # Guarda la imagen modificada en la carpeta de destino
     ds2.save_as(os.path.join(carpeta_destino, archivos_carpeta1[item]))
-    print(archivos_carpeta1[item])
-    print(archivos_carpeta2[item])
+    #print(archivos_carpeta1[item])
+    #print(archivos_carpeta2[item])
 print('\n sacabo')
