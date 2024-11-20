@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pydicom
 from pydicom.dataset import Dataset, FileDataset
+import mat_to_py
 
 def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study_date,patient_name="Anon"):
     """
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     output_dir = "slices_output"
 
     # Crear una matriz 3D ficticia (100 slices de 512x512 píxeles)
-    matrix = np.random.randint(0, 1000, (100, 512, 512), dtype=np.int16)
+    matrix = mat_to_py.cargar_matriz_3d('Validation_CT100.mat', 'volumeCT100')
 
     # Llamar a la función
     save_slices_from_matrix(dicom_template, output_dir, matrix, study_date="20241120", patient_name="Test Patient")

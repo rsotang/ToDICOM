@@ -1,18 +1,29 @@
 import scipy.io
 
-# Ruta al archivo .mat
-mat_file_path = "ruta_al_archivo.mat"
+def cargar_matriz_3d(path_archivo, nombre_variable):
+    """
+    Carga una matriz 3D desde un archivo .mat.
 
-# Carga del archivo .mat
-mat_data = scipy.io.loadmat(mat_file_path)
+    Args:
+        path_archivo (str): Ruta al archivo .mat.
+        nombre_variable (str): Nombre de la variable dentro del archivo .mat.
 
-# Asume que la matriz está almacenada con una clave conocida
-# Sustituye 'nombre_de_la_matriz' por el nombre exacto de la variable en el archivo .mat
-matriz_3d = mat_data.get('nombre_de_la_matriz')
+    Returns:
+        numpy.ndarray: La matriz 3D cargada.
+        None: Si no se encuentra la variable en el archivo.
+    """
+    try:
+        # Cargar el archivo .mat
+        mat_data = scipy.io.loadmat(path_archivo)
 
-# Verifica si se cargó correctamente
-if matriz_3d is not None:
-    print("Matriz 3D cargada con éxito:")
-    print(matriz_3d)
-else:
-    print("No se encontró la matriz con el nombre especificado en el archivo .mat")
+        # Intentar extraer la variable especificada
+        matriz = mat_data.get(nombre_variable)
+
+        if matriz is not None:
+            return matriz
+        else:
+            print(f"La variable '{nombre_variable}' no se encontró en el archivo.")
+            return None
+    except Exception as e:
+        print(f"Error al cargar el archivo .mat: {e}")
+        return None
