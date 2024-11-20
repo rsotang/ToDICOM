@@ -1,5 +1,9 @@
 { pkgs }: {
   deps = [
+    pkgs.gdb
+    pkgs.xsimd
+    pkgs.pkg-config
+    pkgs.libxcrypt
     pkgs.zip
     pkgs.python310Full
     pkgs.replitPackages.prybar-python310
