@@ -41,11 +41,11 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
         #Patient name
         #Patient ID
         #Deidentificaciont metho
-        
 
 
 
-        
+
+
 
         # Actualizar etiquetas específicas del slice
         new_ds.InstanceNumber = i + 1
@@ -69,7 +69,7 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
 # Ejemplo de uso:
 if __name__ == "__main__":
     # Ruta a la plantilla DICOM
-    dicom_template = "Plantilla CT/CT.nmT6Pa0ScaJ1BpWCn65cfZ004.Image 1.dcm"
+    dicom_template = "Plantilla PET/RADIOFISICA.PT.PET_NEURO_FDG_(.5.1.2024.10.23.09.44.14.161.38795067.dcm"
 
     # Carpeta de salida
     output_dir = "slices_output"
