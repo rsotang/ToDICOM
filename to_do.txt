@@ -1,3 +1,5 @@
 encontrar plantillas
-Adaptar el codigo a nuevos estudios
+Adaptar los new a elegir variable de matlab o matriz 3D interna de python
+maquillar los dicom to dicom con input manual según la elección del usuario
+maquillar más etiquetas en las plantillas según el input
 implementar en script general

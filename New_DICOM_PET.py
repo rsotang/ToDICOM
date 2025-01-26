@@ -40,13 +40,7 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
         #Refering pysician name
         #Patient name
         #Patient ID
-        #Deidentificaciont metho
-
-
-
-
-
-
+        #Deidentificaciont method
         # Actualizar etiquetas específicas del slice
         new_ds.InstanceNumber = i + 1
         new_ds.ImagePositionPatient = [0, 0, i]  # Asumiendo 1 mm entre cortes (ajustar según sea necesario)
