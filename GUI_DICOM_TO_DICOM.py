@@ -1,5 +1,6 @@
 import time
 import PySimpleGUI as sg
+import subprocess
 
 # Definir el layout de la ventana de opciones
 def create_options_window():
@@ -19,18 +20,18 @@ def create_options_window():
         [sg.Text('Opciones avanzadas')],
         [sg.Text(textos[0]),sg.Push(),  sg.Text(textos[1]), sg.Push(), sg.Text(textos[2]),sg.Push(),  sg.Text(textos[3]), sg.Push(), sg.Text(textos[4])],
         [
-            sg.Input(size=(max_length, 1), key='-CT-'), 
-            sg.Input(size=(max_length, 1), key='-SPECT-'),
-            sg.Input(size=(max_length, 1), key='-PET-'),
-            sg.Input(size=(max_length, 1), key='-MRI-'),
-            sg.Input(size=(max_length, 1), key='-RTDOSE-')
+            sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla CT/Plantilla_CT.dcm',size=(max_length, 1), key='-CT-'), 
+            sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla SPECT/Plantilla_SPECT.dcm',size=(max_length, 1), key='-SPECT-'),
+            sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla PET/Plantilla_PET.dcm',size=(max_length, 1), key='-PET-'),
+            sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla MRI/Plantilla_MRI.dcm',size=(max_length, 1), key='-MRI-'),
+            sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/PLantilla RTDose/Plantilla_RTDOSE.dcm',size=(max_length, 1), key='-RTDOSE-')
         ],
         [
-            sg.FolderBrowse('Seleccionar', target='-CT-'),sg.Push(),
-            sg.FolderBrowse('Seleccionar', target='-SPECT-'), sg.Push(),
-            sg.FolderBrowse('Seleccionar', target='-PET-'), sg.Push(),
-            sg.FolderBrowse('Seleccionar', target='-MRI-'),sg.Push(),
-            sg.FolderBrowse('Seleccionar', target='-RTDOSE-')
+            sg.FileBrowse('Seleccionar', target='-CT-'),sg.Push(),
+            sg.FileBrowse('Seleccionar', target='-SPECT-'), sg.Push(),
+            sg.FileBrowse('Seleccionar', target='-PET-'), sg.Push(),
+            sg.FileBrowse('Seleccionar', target='-MRI-'),sg.Push(),
+            sg.FileBrowse('Seleccionar', target='-RTDOSE-')
         ],
         [sg.Button('Guardar'), sg.Button('Salir')]
     ]
@@ -87,7 +88,7 @@ def create_progress_window():
 # Definir el layout de la ventana principal
 layout = [
     [sg.Push(), sg.Text('DICOM_to_DICOM', font=('Helvetica', 16)), sg.Push()],
-    [sg.Text('Directorio de entrada:'), sg.Input(size=(10, 10)), sg.FolderBrowse('Seleccionar'), sg.Text('Directorio de salida:'), sg.Input(size=(10, 10)), sg.FolderBrowse('Seleccionar')],
+    [sg.Text('Directorio de entrada:'), sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/input', key= '-INPUT_DIR-',size=(10, 10)), sg.FolderBrowse('Seleccionar'), sg.Text('Directorio de salida:'), sg.Input(default_text='D:/Utilidades/DICOM_TO_DICOM/ToDICOM/output', key='-OUTPUT_DIR-', size=(10, 10)), sg.FolderBrowse('Seleccionar')],
     [],
     [sg.Text('Modalidad de imagen de entrada:'), sg.Combo([' ', 'CT', 'SPECT', 'PET', 'MRI', 'RTDOSE', '.mat'], key='-MODALITY_IN-', enable_events=True), sg.Push(), sg.Text('Modalidad de imagen de salida:'), sg.Combo(['', 'CT', 'SPECT', 'PET', 'MRI', 'RTDOSE'], key='-MODALITY_OUT-', enable_events=True)],
     [],
@@ -99,6 +100,15 @@ layout = [
 ##############################################################################
 # Crear la ventana principal
 window = sg.Window('Software de Procesamiento de Imágenes', layout)
+
+# Variables globales para almacenar los valores de las opciones avanzadas
+advanced_options = {
+    '-CT-': 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla CT/Plantilla_CT.dcm',
+    '-SPECT-': 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla SPECT/Plantilla_SPECT.dcm',
+    '-PET-': 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla PET/Plantilla_PET.dcm',
+    '-MRI-': 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla MRI/Plantilla_MRI.dcm',
+    '-RTDOSE-': 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/PLantilla RTDose/Plantilla_RTDOSE.dcm'
+}
 
 # Bucle de eventos
 while True:
@@ -114,9 +124,15 @@ while True:
             if opt_event in (sg.WIN_CLOSED, 'Salir'):
                 break
             if opt_event == 'Guardar':
-                # Aquí puedes guardar las opciones seleccionadas
-                sg.popup('Opciones guardadas')
-                break
+                if opt_event == 'Guardar':
+                # Actualizar las variables globales con los valores de la ventana de opciones
+                    advanced_options['-CT-'] = opt_values['-CT-']
+                    advanced_options['-SPECT-'] = opt_values['-SPECT-']
+                    advanced_options['-PET-'] = opt_values['-PET-']
+                    advanced_options['-MRI-'] = opt_values['-MRI-']
+                    advanced_options['-RTDOSE-'] = opt_values['-RTDOSE-']
+                    sg.popup('Opciones guardadas')              
+                    break
         options_window.close()
 
     # Habilitar botón de opciones de modalidad cuando se selecciona una modalidad
@@ -141,31 +157,88 @@ while True:
                 else:  # Si la casilla no está marcada
                     modality_window[input_key].update(disabled=True, background_color='#636363')  # Deshabilitar y cambiar color
 
-            # Manejar el botón Aceptar
+             # Manejar el botón Aceptar
             if mod_event == 'Aceptar':
                 # Recopilar los valores de los cuadros de texto habilitados
                 resultados = {}
-                for opcion in ['Opción A', 'Opción B', 'Opción C']:
-                    if mod_values[f'-CHECK-{opcion}-']:  # Si la casilla está marcada
-                        resultados[opcion] = mod_values[f'-INPUT-{opcion}-']  # Guardar el valor del cuadro de texto
+                for opcion in mod_values:
+                    if opcion.startswith('-CHECK-') and mod_values[opcion]:  # Si la casilla está marcada
+                        opcion_nombre = opcion.split('-')[2]
+                        resultados[opcion_nombre] = mod_values[f'-INPUT-{opcion_nombre}-']
                 print("Valores seleccionados:", resultados)
                 break
         modality_window.close()
 
+###############################################################################
+
     # Iniciar la ejecución de scripts y mostrar la ventana de progreso
     if event == '-START-':
+    # Obtener los valores de la GUI
+        input_dir = values['-INPUT_DIR-']
+        output_dir = values['-OUTPUT_DIR-']
+        modality = values['-MODALITY_OUT-']  # Definir modality aquí
+
+        # Usar las variables globales para obtener las rutas de las plantillas
+        try:
+            if modality == 'CT':
+                dicom_template_path = advanced_options['-CT-']
+            elif modality == 'SPECT':
+                dicom_template_path = advanced_options['-SPECT-']
+            elif modality == 'PET':
+                dicom_template_path = advanced_options['-PET-']
+            elif modality == 'MRI':
+                dicom_template_path = advanced_options['-MRI-']
+            elif modality == 'RTDOSE':
+                dicom_template_path = advanced_options['-RTDOSE-']
+            else:
+                dicom_template_path = ''
+        except Exception as e:
+            sg.popup('Error', f'Ocurrió un error al obtener la plantilla:\n{str(e)}')
+            continue
+    
+        # Verificar que los campos obligatorios estén llenos
+        if not input_dir or not output_dir or not dicom_template_path:
+            sg.popup('Error', 'Por favor, complete todos los campos obligatorios.')
+            continue
+    
+        # Crear la lista de argumentos para el script
+        args = [
+            'python', 'DICOM_TO_DICOM.py',  # Ejecutar el script       
+            
+            dicom_template_path, 
+            # Directoria de las plantillas dependiendo de la modalidad de elección
+            output_dir,      # Directorio de salida
+            input_dir        # Directorio de entrada
+        ]
+    
+        # Mostrar la ventana de progreso
         progress_window = create_progress_window()
-        for i in range(100):
-            # Simular la ejecución de un script
-            time.sleep(0.1)
-            progress_window['-PROGRESS-'].update_bar(i + 1)
-            progress_window.refresh()
-        progress_window['-CLOSE-'].update(disabled=False)
+    
+        # Ejecutar el script externo
+        try:
+            process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            for i in range(100):
+                # Simular la ejecución de un script (puedes reemplazar esto con la lógica real)
+                time.sleep(0.001)
+                progress_window['-PROGRESS-'].update_bar(i + 1)
+                progress_window.refresh()
+    
+            # Habilitar el botón de cerrar
+            progress_window['-CLOSE-'].update(disabled=False)
+    
+            # Esperar a que el proceso termine
+            stdout, stderr = process.communicate()
+            if process.returncode == 0:
+                sg.popup('Éxito', 'El script se ejecutó correctamente.')
+            else:
+                sg.popup('Error', f'El script falló:\n{stderr.decode()}')
+    
+        except Exception as e:
+            sg.popup('Error', f'Ocurrió un error al ejecutar el script:\n{str(e)}')
+    
+        # Cerrar la ventana de progreso
         while True:
             prog_event, prog_values = progress_window.read()
             if prog_event in (sg.WIN_CLOSED, '-CLOSE-'):
                 break
         progress_window.close()
-        sg.popup('Ejecución completada')
-
-window.close()

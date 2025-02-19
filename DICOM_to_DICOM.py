@@ -4,7 +4,7 @@ import pydicom
 from pydicom.dataset import Dataset, FileDataset
 from datetime import datetime
 from pydicom.uid import generate_uid
-from pydicom.dataset import Dataset, FileDataset
+import argparse
 
 def load_slices_from_dicom(input_folder):
     """
@@ -103,17 +103,15 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
 
 # Ejemplo de uso:
 if __name__ == "__main__":
-    # Ruta a la plantilla DICOM
-    dicom_template = "Plantilla PET/RADIOFISICA.PT.PET_NEURO_FDG_(.5.1.2024.10.23.09.44.14.161.38795067.dcm"
+    parser = argparse.ArgumentParser(description="Genera una serie de archivos DICOM a partir de una plantilla.")
+    parser.add_argument("dicom_template_path", type=str, help="Ruta al archivo DICOM base (plantilla).")
+    parser.add_argument("output_dir", type=str, help="Directorio donde se guardarán los nuevos archivos DICOM.")
+    parser.add_argument("input_dir", type=str, help="Directorio que contiene los archivos DICOM originales.")
 
-    # Carpeta de salida
-    output_dir = "output"
-
-    # Carpeta que contiene los archivos DICOM originales (input folder)
-    input_dir = "input"
-
+    args = parser.parse_args()
+    
     # Cargar la matriz 3D a partir de las imágenes DICOM en la carpeta de entrada
-    matrix = load_slices_from_dicom(input_dir)
+    matrix = load_slices_from_dicom(args.input_dir)
 
     # Llamar a la función para volcar la matriz en archivos DICOM
-    save_slices_from_matrix(dicom_template, output_dir, matrix, study_date=datetime.today(), patient_name="Test Patient")
+    save_slices_from_matrix(args.dicom_template_path,args.output_dir, matrix, study_date=datetime.today(), patient_name="Test Patient")
