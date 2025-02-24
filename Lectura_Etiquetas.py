@@ -1,9 +1,42 @@
 import PySimpleGUI as sg
 from D_to_D_aux_functions.categorized_tags import category_mappings as category_mappings
 import D_to_D_aux_functions.categorized_tags as aux
+import pydicom
 
+def update_dicom_tag(dicom_file, tag_updates):
+    """Actualiza múltiples etiquetas DICOM en el archivo con los valores proporcionados."""
+    # Cargar el archivo DICOM
+    dicom_data = pydicom.dcmread(dicom_file)
 
+    # Iterar sobre las actualizaciones de las etiquetas
+    for tag_id, new_value in tag_updates.items():
+        # Buscar la etiqueta por su ID (tag_id)
+        tag = dicom_data.get(tag_id)
 
+        if tag is not None:
+            # Actualizar el valor de la etiqueta
+            tag.value = new_value
+        else:
+            # Si la etiqueta no existe, agregarla (esto depende del uso, pero generalmente las etiquetas deben existir)
+            dicom_data.add_new(tag_id, 'LO', new_value)  # 'LO' es el tipo de VR de la etiqueta (en este caso string)
+
+    # Guardar los cambios en el archivo DICOM
+    dicom_data.save_as('D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla CT/nuevo_archivo.dcm')
+    
+def process_tag_values_and_update_dicom(dicom_file, category, categorized_tags, tag_values):
+    """Procesa los valores seleccionados y prepara las etiquetas DICOM correspondientes para ser actualizadas."""
+    tag_updates = {}  # Diccionario para almacenar las actualizaciones de las etiquetas
+
+    # Iterar sobre las etiquetas de la categoría
+    for tag in categorized_tags[category]:
+        tag_name, tag_id, _ = tag
+        if tag_values.get(f'-CHECK-{tag_id}-', False):  # Verificar si la casilla está marcada
+            new_value = tag_values[f'-INPUT-{tag_id}-']
+            # Almacenar el valor actualizado para esta etiqueta en el diccionario
+            tag_updates[tag_id] = new_value
+
+    # Llamar a la función para actualizar todas las etiquetas de una sola vez
+    return tag_updates
 def create_main_window(categories):
     """Crea la ventana principal con las opciones de categorías."""
     layout = [
@@ -54,7 +87,7 @@ def select_modality():
 
 def main():
     # Ruta al archivo DICOM
-    dicom_file = 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla RTDOSE/Plantilla_RTDOSE.dcm' 
+    dicom_file = 'D:/Utilidades/DICOM_TO_DICOM/ToDICOM/Plantilla CT/Plantilla_CT-modified.dcm' 
     
 
     modality_window = select_modality()
@@ -100,18 +133,26 @@ def main():
                     tag_window = None
                     break
                 elif tag_event == 'Aceptar':
-                    # Aquí puedes procesar los valores seleccionados
+                    # Aquí puedes procesar los valores seleccionados y actualizarlos en el DICOM
                     print("Valores seleccionados:")
-                    for tag in categorized_tags[category]:  # Cambiar según la categoría
+                    for tag in categorized_tags[category]:  # Iterar por las etiquetas de la categoría
                         tag_name, tag_id, _ = tag
                         if tag_values[f'-CHECK-{tag_id}-']:
                             print(f'{tag_name}: {tag_values[f'-INPUT-{tag_id}-']}')
+                    
+                    # Procesar los valores y actualizar el archivo DICOM
+                    tag_updates = process_tag_values_and_update_dicom(dicom_file, category, categorized_tags, tag_values)
+                    
+                    update_dicom_tag(dicom_file, tag_updates)
+                    
                     break
+                    
                 # Habilitar/deshabilitar el cuadro de texto cuando se marca/desmarca la casilla
                 for tag in categorized_tags[category]:  # Cambiar según la categoría
                     tag_name, tag_id, _ = tag
                     if tag_event == f'-CHECK-{tag_id}-':
                         tag_window[f'-INPUT-{tag_id}-'].update(disabled=not tag_values[f'-CHECK-{tag_id}-'])
+                        
 
     main_window.close()
 

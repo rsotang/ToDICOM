@@ -17,7 +17,7 @@ def load_slices_from_dicom(input_folder):
     return matrix_3d
 
 # Función para guardar las imágenes DICOM
-def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study_date, patient_name="Anon"):
+def save_slices_from_matrix(dicom_template_path, output_folder, file_name,matrix_3d,tag_updates):
     template_ds = pydicom.dcmread(dicom_template_path)
     slices, rows, cols = matrix_3d.shape
     if (rows, cols) != (template_ds.Rows, template_ds.Columns):
@@ -29,8 +29,21 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
     new_series_uid = generate_uid()
     for i in range(slices):
         new_ds = template_ds.copy()
-        new_ds.PatientName = patient_name
-        new_ds.StudyDate = study_date
+        for tag_id, new_value in tag_updates.items():
+            # Buscar la etiqueta por su ID (tag_id)
+            tag = new_ds.get(tag_id)
+
+            if tag is not None:
+                # Actualizar el valor de la etiqueta
+                tag.value = new_value
+            else:
+                # Si la etiqueta no existe, agregarla (esto depende del uso, pero generalmente las etiquetas deben existir)
+                new_ds.add_new(tag_id, 'LO', new_value)  # 'LO' es el tipo de VR de la etiqueta (en este caso string)
+        
+        
+        new_ds.RescaleIntercept = 0
+        new_ds.RescaleSlope = 1
+        
         new_ds.StudyInstanceUID = new_study_uid
         new_ds.SeriesInstanceUID = new_series_uid
         new_ds.SOPInstanceUID = generate_uid()
@@ -38,9 +51,8 @@ def save_slices_from_matrix(dicom_template_path, output_folder, matrix_3d, study
         new_ds.ImagePositionPatient = [0, 0, i]
         new_ds.SliceLocation = i
         new_ds.PixelData = matrix_3d[i].astype(np.int16).tobytes()
-        new_ds.RescaleIntercept = 0
-        new_ds.RescaleSlope = 1
-        output_path = os.path.join(output_folder, f"slice_{i+1:03d}.dcm")
+        
+        output_path = os.path.join(output_folder, file_name+f"_{i+1:03d}.dcm")
         new_ds.save_as(output_path)
         print(f"Guardado: {output_path}")
 
@@ -70,220 +82,37 @@ def read_dicom_tags(dicom_file):
     
     return tags
 
-def categorize_tags(tags, modality):
-    """Clasifica las etiquetas DICOM en categorías según la modalidad especificada."""
-    categories = defaultdict(list)
+def update_dicom_tag(dicom_file, tag_updates,output_path):
+    """Actualiza múltiples etiquetas DICOM en el archivo con los valores proporcionados."""
+    # Cargar el archivo DICOM
+    dicom_data = pydicom.dcmread(dicom_file)
 
-    # Mapeo de categorías para cada modalidad
-    modality_mappings = {
-        'CT': {
-            'Patient': [
-                'Patient\'s Name', 'Patient ID', 'Patient\'s Birth Date', 'Patient\'s Sex',
-                'Patient\'s Weight', 'Patient\'s Position'
-            ],
-            'Study': [
-                'Study Instance UID', 'Study Date', 'Study Time', 'Study ID', 'Accession Number',
-                'Referring Physician Name', 'Study Description', 'Instance Creation Date', 'Instance Creation Time',
-                'Content Date', 'Content Time'
-            ],
-            'Series': [
-                'Series Instance UID', 'Series Number', 'Modality', 'Series Date',
-                'Series Time', 'OperatorsName', 'Protocol Name', 'Body Part Examined',
-                'Scanning Sequence','Series Description'
-            ],
-            'Image': [
-                'SOP Class UID', 'SOP Instance UID', 'Instance Number', 'Image Type',
-                'Photometric Interpretation', 'Rows', 'Columns', 'Pixel Spacing',
-                'Bits Allocated', 'Bits Stored', 'High Bit', 'Rescale Intercept', 
-                'Rescale Slope',  'Slice Thickness', 'Slice Location',
-                'Window Center', 'Window Width', 'Pixel Representation'
-            ],
-            'Acquisition': [
-                'Acquisition Number', 'Acquisition Date', 'Acquisition Time', 'Exposure Time', 'KVP',
-                'X-Ray Tube Current', 'Exposure', 'Reconstruction Diameter', 'Table Height',
-                'RotationDirection', 'Field Of View Shape', 'Field Of View Dimensions', 'Scan Options',
-                'Data Collection Diameter','Gantry/Detector Tilt', 'Rotation Direction','Filter Type',
-                'Generator Power', 'Focal Spot(s)', 'Convolution Kernel', 'Patient Position', 'CTDIvol',
-                'Image Position (Patient)', 'Image Orientation (Patient)', 'Frame of Reference UID',
-                'Position Reference Indicator','Filter Type'
-            ],
-            'Device': [
-                'Manufacturer', 'Manufacturer Model Name', 'Station Name', 'Device Serial Number',
-                'Software Versions', 'Institution Name', 'Institution Address', 'Manufacturer\'s Model Name'
-            ],
-            'Other': []
-        },
-        'PET': {
-            'Patient': [
-                'Patient\'s Name', 'Patient ID', 'Patient\'s Birth Date', 'Patient\'s Sex',
-                'Patient\'s Weight', 'Patient\'s Position'
-            ],
-            'Study': [
-                'Study Instance UID', 'Study Date', 'Study Time', 'Study ID', 'Accession Number',
-                'Referring Physician Name', 'Study Description', 'Instance Creation Date', 'Instance Creation Time',
-                'Content Date', 'Content Time'
-            ],
-            'Series': [
-                'Series Instance UID', 'Series Number', 'Modality', 'Series Date',
-                'Series Time', 'Operators Name', 'Protocol Name', 'Body Part Examined',
-                'Scanning Sequence','Series Description', 'Sequence Variant', 'Scan Options', 'Imaging Frequency',
-                'Magnetic Field Strength', 'Echo Train Length', 'Inversion Time'
-            ],
-            'Image': [
-                'SOP Class UID', 'SOP Instance UID', 'Instance Number', 'Image Type',
-                'Photometric Interpretation', 'Rows', 'Columns', 'Pixel Spacing',
-                'Bits Allocated', 'Bits Stored', 'High Bit', 'Rescale Intercept', 
-                'Rescale Slope',  'Slice Thickness', 'Slice Location',
-                'Window Center', 'Window Width', 'Pixel Representation', 'Flip Angle'
-            ],
-            'Acquisition': [
-                'Acquisition Number', 'Acquisition Date', 'Acquisition Time',
-                'Reconstruction Diameter', 'Table Height', 'Field Of View Shape', 'Field Of View Dimensions', 'Scan Options',
-                'Data Collection Diameter', 'Convolution Kernel', 'Patient Position',
-                'Image Position (Patient)', 'Image Orientation (Patient)', 'Frame of Reference UID',
-                'Position Reference Indicator','TR', 'TE',
-                'TI', 'Echo Time', 'Repetition Time', 'Number Of Averages', 'Phase Encoding Direction',
-                'Acquisition Matrix', 'Percent Sampling', 'Percent Phase Field of View', 
-                'Pixel Bandwidth', 'Contrast/Bolus Agent', 'MR Acquisition Type'
-            ],
-            'Device': [
-                'Manufacturer', 'Manufacturer Model Name', 'Station Name', 'Device Serial Number',
-                'Software Versions', 'Institution Name', 'Institution Address', 'Manufacturer\'s Model Name'
-            ],
-            'Other': []
-            },  
-        'MRI': { 
-            'Patient': [
-                'Patient\'s Name', 'Patient ID', 'Patient\'s Birth Date', 'Patient\'s Sex',
-                'Patient\'s Weight', 'Patient\'s Position'
-            ],
-            'Study': [
-                'Study Instance UID', 'Study Date', 'Study Time', 'Study ID', 'Accession Number',
-                'Referring Physician Name', 'Study Description', 'Instance Creation Date', 'Instance Creation Time',
-                'Content Date', 'Content Time'
-            ],
-            'Series': [
-                'Series Instance UID', 'Series Number', 'Modality', 'Series Date',
-                'Series Time', 'Operators Name', 'Protocol Name', 'Body Part Examined',
-                'Series Description'
-            ],
-            'Image': [
-                'SOP Class UID', 'SOP Instance UID', 'Instance Number', 'Image Type',
-                'Photometric Interpretation', 'Rows', 'Columns', 'Pixel Spacing',
-                'Bits Allocated', 'Bits Stored', 'High Bit', 'Rescale Intercept', 
-                'Rescale Slope', 'Slice Thickness', 'Slice Location',
-                'Window Center', 'Window Width', 'Pixel Representation', 'Image Position (Patient)',
-                'Image Orientation (Patient)',
-            ],
-            'Acquisition': [
-                'Acquisition Number', 'Acquisition Date', 'Acquisition Time',
-                'Reconstruction Diameter', 'Table Height', 'Field Of View Shape', 'Field Of View Dimensions',
-                'Data Collection Diameter', 'Convolution Kernel', 'Patient Position',
-                'Attenuation Correction Method', 'Scatter Correction Method', 'Frame Reference Time', 'Decay Correction',
-                'Random Correction Method', 'Collimator Type', 'Actual Frame Duration', 'Energy Window Lower Limit', 'Energy Window Upper Limit'
-            ],
-            'Radiopharmaceutical': [
-                'Radiopharmaceutical', 'Radiopharmaceutical Start Time', 'Radionuclide Total Dose', 
-                'Radionuclide Half Life', 'Radionuclide Positron Fraction', 'Units', 'Counts Source',
-                'Decay Factor', 'Dose Calibration Factor', 'Scatter Fraction Factor', 'Radiopharmaceutical Start DateTime',
-                'Radiopharmaceutical Stop DateTime'
-            ],
-            'Device': [
-                'Manufacturer', 'Manufacturer Model Name', 'Station Name', 'Device Serial Number',
-                'Software Versions', 'Institution Name', 'Institution Address', 'Manufacturer\'s Model Name'
-            ],
-            'Other': []
-            },  
-        'SPECT': { 
-            'Patient': [
-                'Patient\'s Name', 'Patient ID', 'Patient\'s Birth Date', 'Patient\'s Sex',
-                'Patient\'s Weight', 'Patient\'s Position'
-            ],
-            'Study': [
-                'Study Instance UID', 'Study Date', 'Study Time', 'Study ID', 'Accession Number',
-                'Referring Physician Name', 'Study Description', 'Instance Creation Date', 'Instance Creation Time',
-                'Content Date', 'Content Time'
-            ],
-            'Series': [
-                'Series Instance UID', 'Series Number', 'Modality', 'Series Date',
-                'Series Time', 'Operators Name', 'Protocol Name', 'Body Part Examined',
-                'Series Description'
-            ],
-            'Image': [
-                'SOP Class UID', 'SOP Instance UID', 'Instance Number', 'Image Type',
-                'Photometric Interpretation', 'Rows', 'Columns', 'Pixel Spacing',
-                'Bits Allocated', 'Bits Stored', 'High Bit', 'Rescale Intercept', 
-                'Rescale Slope', 'Slice Thickness', 'Slice Location',
-                'Window Center', 'Window Width', 'Pixel Representation', 'Image Position (Patient)',
-                'Image Orientation (Patient)',
-            ],
-            'Acquisition': [
-                'Acquisition Number', 'Acquisition Date', 'Acquisition Time',
-                'Reconstruction Diameter', 'Table Height', 'Field Of View Shape', 'Field Of View Dimensions',
-                'Data Collection Diameter', 'Convolution Kernel', 'Patient Position',
-                'Attenuation Correction Method', 'Scatter Correction Method', 'Frame Reference Time', 'Decay Correction',
-                'Random Correction Method', 'Collimator Type', 'Actual Frame Duration', 'Energy Window Lower Limit', 'Energy Window Upper Limit'
-            ],
-            'Radiopharmaceutical': [
-                'Radiopharmaceutical', 'Radiopharmaceutical Start Time', 'Radionuclide Total Dose', 
-                'Radionuclide Half Life', 'Radionuclide Positron Fraction', 'Units', 'Counts Source',
-                'Decay Factor', 'Dose Calibration Factor', 'Scatter Fraction Factor', 'Radiopharmaceutical Start DateTime',
-                'Radiopharmaceutical Stop DateTime','Counts Accumulated', 'Count Rate'
-            ],
-            'Device': [
-                'Manufacturer', 'Manufacturer Model Name', 'Station Name', 'Device Serial Number',
-                'Software Versions', 'Institution Name', 'Institution Address', 'Manufacturer\'s Model Name'
-            ],
-            'Other': []
-            },  
-        'RTDOSE': { 
-            'Patient': [
-                'Patient\'s Name', 'Patient ID', 'Patient\'s Birth Date', 'Patient\'s Sex',
-                'Patient\'s Weight', 'Patient\'s Position'
-            ],
-            'Study': [
-                'Study Instance UID', 'Study Date', 'Study Time', 'Study ID', 'Accession Number',
-                'Referring Physician Name', 'Study Description', 'Instance Creation Date', 'Instance Creation Time',
-                'Content Date', 'Content Time'
-            ],
-            'Series': [
-                'Series Instance UID', 'Series Number', 'Modality', 'Series Date',
-                'Series Time', 'OperatorsName', 'Protocol Name', 'Body Part Examined',
-                'Scanning Sequence','Series Description'
-            ],
-            'Image': [
-                'SOP Class UID', 'SOP Instance UID', 'Instance Number', 'Image Type',
-                'Photometric Interpretation', 'Rows', 'Columns', 'Pixel Spacing',
-                'Bits Allocated', 'Bits Stored', 'High Bit', 'Rescale Intercept', 
-                'Rescale Slope',  'Slice Thickness', 'Slice Location',
-                'Window Center', 'Window Width', 'Pixel Representation'
-            ],
-            'Dose': [
-                 'Dose Units', 'Dose Type', 'Dose Summation Type', 'Dose Grid Scaling', 'DVH Normalization Point',
-                 'DVH Normalization Dose Value', 'Beam Dose', 'Beam Meter set', 'Beam Dose Point Depth', 'Beam DosePoint SSD',
-                 'Referenced RT Plan Sequence', 'Dose Reference UID'
-             ],
-             'Grid': [
-                 'Rows', 'Columns', 'Number Of Frames', 'Grid Frame Off set Vector', 'Pixel Spacing',
-                 'SliceThickness', 'Dose Grid Scaling',
-                 'Grid Frame Off set Vector', 'Frame Of Reference UID', 'Plane Position Sequence', 
-                 
-             ],
-            'Other': []
-            }  
-    }
+    # Iterar sobre las actualizaciones de las etiquetas
+    for tag_id, new_value in tag_updates.items():
+        # Buscar la etiqueta por su ID (tag_id)
+        tag = dicom_data.get(tag_id)
 
-    category_mapping = modality_mappings.get(modality, {})
+        if tag is not None:
+            # Actualizar el valor de la etiqueta
+            tag.value = new_value
+        else:
+            # Si la etiqueta no existe, agregarla (esto depende del uso, pero generalmente las etiquetas deben existir)
+            dicom_data.add_new(tag_id, 'LO', new_value)  # 'LO' es el tipo de VR de la etiqueta (en este caso string)
 
-    for tag in tags:
-        tag_name, tag_id, tag_value = tag
-        added = False
-        for category, keywords in category_mapping.items():
-            if any(keyword in tag_name for keyword in keywords):
-                categories[category].append(tag)
-                added = True
-                break
-        if not added:
-            categories['Other'].append(tag)
+    # Guardar los cambios en el archivo DICOM
+    dicom_data.save_as(output_path)
+    
+def process_tag_values_and_update_dicom(dicom_file, category, categorized_tags, tag_values):
+    """Procesa los valores seleccionados y prepara las etiquetas DICOM correspondientes para ser actualizadas."""
+    tag_updates = {}  # Diccionario para almacenar las actualizaciones de las etiquetas
 
-    return categories
+    # Iterar sobre las etiquetas de la categoría
+    for tag in categorized_tags[category]:
+        tag_name, tag_id, _ = tag
+        if tag_values.get(f'-CHECK-{tag_id}-', False):  # Verificar si la casilla está marcada
+            new_value = tag_values[f'-INPUT-{tag_id}-']
+            # Almacenar el valor actualizado para esta etiqueta en el diccionario
+            tag_updates[tag_id] = new_value
+
+    # Llamar a la función para actualizar todas las etiquetas de una sola vez
+    return tag_updates
