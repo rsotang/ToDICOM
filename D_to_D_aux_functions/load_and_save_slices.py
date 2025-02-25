@@ -3,9 +3,18 @@ import numpy as np
 import pydicom
 from pydicom.uid import generate_uid
 from collections import defaultdict
+import scipy.io
+import matplotlib.pyplot as plt
 
-# Función para cargar las imágenes DICOM
-def load_slices_from_dicom(input_folder):
+def load_slices_from_dicom(input_folder, mode='slices'):
+    if mode == 'slices':
+        return load_multiple_slices(input_folder)
+    elif mode == '3D':
+        return load_single_multislice_dicom(input_folder)
+    else:
+        raise ValueError("Modo no soportado. Use 'slices' o '3D'.")
+
+def load_multiple_slices(input_folder):
     dicom_files = sorted([os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".dcm")])
     first_slice = pydicom.dcmread(dicom_files[0])
     rows, cols = first_slice.Rows, first_slice.Columns
@@ -16,6 +25,77 @@ def load_slices_from_dicom(input_folder):
         matrix_3d[i, :, :] = ds.pixel_array
     return matrix_3d
 
+def load_single_multislice_dicom(input_folder):
+    dicom_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".dcm")]
+    if len(dicom_files) != 1:
+        raise ValueError("La carpeta debe contener exactamente un archivo DICOM para el modo '3d'.")
+    dicom_file = dicom_files[0]
+    ds = pydicom.dcmread(dicom_file)
+    if not hasattr(ds, 'NumberOfFrames') or ds.NumberOfFrames <= 1:
+        raise ValueError("El archivo DICOM no es multislice o no contiene múltiples frames.")
+    rows, cols = ds.Rows, ds.Columns
+    slices = ds.NumberOfFrames
+    matrix_3d = np.zeros((slices, rows, cols), dtype=np.int16)
+    matrix_3d[:, :, :] = ds.pixel_array
+    return matrix_3d
+
+def plot_slices(volume):
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    
+    # Cortes en los planos XY, XZ, YZ
+    slice_x = volume[volume.shape[0] // 2, :, :]
+    slice_y = volume[:, volume.shape[1] // 2, :]
+    slice_z = volume[:, :, volume.shape[2] // 2]
+    
+    axes[0].imshow(slice_x, cmap='gray')
+    axes[0].set_title("Corte XY")
+    
+    axes[1].imshow(slice_y, cmap='gray')
+    axes[1].set_title("Corte XZ")
+    
+    axes[2].imshow(slice_z, cmap='gray')
+    axes[2].set_title("Corte YZ")
+    
+    plt.show()
+
+
+
+def load_slices_from_mat(input_dir): #se asume que la matriz ya va en 3D
+   
+    try:
+        input_file = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(".mat")]
+        if len(input_file) != 1:
+           raise ValueError("La carpeta debe contener exactamente un archivo para el modo '3d'.")
+        # Cargar el archivo .mat
+        mat_data = scipy.io.loadmat(input_file)
+
+        # Intentar extraer la variable asumiendo que siempre va a ocupar la cuarta posición del diccionario 
+        matriz = list(mat_data.values())[3]
+
+        if matriz is not None:
+            return matriz
+        
+    except Exception as e:
+        print(f"Error al cargar el archivo .mat: {e}")
+        return None
+    
+def load_slices_from_npy(input_dir): #se asume que la matriz ya va en 3D
+   
+    try:
+        input_file = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith(".npy")]
+        if len(input_file) != 1:
+           raise ValueError("La carpeta debe contener exactamente un archivo para el modo '3d'.")
+        # Cargar el archivo .npy
+        matriz = np.load(input_file)     
+        
+
+        if matriz is not None:
+            return matriz
+        
+    except Exception as e:
+        print(f"Error al cargar el archivo .npy: {e}")
+        return None
+    
 # Función para guardar las imágenes DICOM
 def save_slices_from_matrix(dicom_template_path, output_folder, file_name,matrix_3d,tag_updates):
     template_ds = pydicom.dcmread(dicom_template_path)
