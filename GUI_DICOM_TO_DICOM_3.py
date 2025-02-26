@@ -194,12 +194,12 @@ while True:
                            tag_name, tag_id, _ = tag
                            
                            if tag_values[f'-CHECK-{tag_id}-']:
-                               #tag_window[f'-CHECK-{tag_id}-'].update(False)
-                               #tag_window[f'-INPUT-{tag_id}-'].update(disabled=True, background_color='black')
+                               tag_window[f'-CHECK-{tag_id}-'].update(False)
+                               tag_window[f'-INPUT-{tag_id}-'].update(disabled=True, background_color='black')
                                new_value = tag_values[f'-INPUT-{tag_id}-']
                                # Actualizar tag_updates
-                               #print(f'{tag_name}: {tag_values[f"-INPUT-{tag_id}-"]}')
-                               #print('TAGVALUE',tag_values[f'-INPUT-{tag_id}-'],type(tag_values[f'-INPUT-{tag_id}-']),tag_id, type(tag_id))
+                               print(f'{tag_name}: {tag_values[f"-INPUT-{tag_id}-"]}')
+                               
                                tag_updates.update(aux.process_tag_values_and_update_dicom(dicom_template_path, category, categorized_tags, tag_values))
                                # Actualizar categorized_tags
                                
@@ -207,7 +207,7 @@ while True:
                                    if id_ == tag_id:
                                        categorized_tags[category][idx] = (name, id_, new_value)
                         tag_window.close()
-                        #print(tag_updates,tag_updates.items(),type(tag_updates.items()),type(tag_updates))
+                        
                         break
                         
                     
